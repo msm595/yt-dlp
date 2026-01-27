@@ -7,6 +7,7 @@ from .vimeo import VimeoIE
 from ..networking.exceptions import HTTPError
 from ..utils import (
     KNOWN_EXTENSIONS,
+    MEDIA_EXTENSIONS,
     ExtractorError,
     clean_html,
     determine_ext,
@@ -381,13 +382,13 @@ class PatreonIE(PatreonBaseIE):
         video_id = self._match_id(url)
         post = self._call_api(
             f'posts/{video_id}', video_id, query={
-                'fields[media]': 'download_url,mimetype,size_bytes,file_name',
+                'fields[media]': 'download_url,image_urls,mimetype,size_bytes,file_name,metadata',
                 'fields[post]': 'comment_count,content,content_teaser_text,cleaned_teaser_text,embed,image,like_count,post_file,published_at,title,current_user_can_view',
                 'fields[user]': 'full_name,url',
                 'fields[post_tag]': 'value',
                 'fields[campaign]': 'url,name,patron_count',
                 'json-api-use-default-includes': 'false',
-                'include': 'audio,user,user_defined_tags,campaign,attachments_media',
+                'include': 'audio,user,user_defined_tags,campaign,attachments_media,images,media',
             })
         attributes = post['data']['attributes']
         info = traverse_obj(attributes, {
@@ -412,7 +413,7 @@ class PatreonIE(PatreonBaseIE):
                 # if size_bytes is None, this media file is likely unavailable
                 # See: https://github.com/yt-dlp/yt-dlp/issues/4608
                 size_bytes = int_or_none(media_attributes.get('size_bytes'))
-                if download_url and ext in KNOWN_EXTENSIONS and size_bytes is not None:
+                if download_url and ext in (*KNOWN_EXTENSIONS, *MEDIA_EXTENSIONS.thumbnails) and size_bytes is not None:
                     idx += 1
                     entries.append({
                         'id': f'{video_id}-{idx}',
@@ -420,6 +421,8 @@ class PatreonIE(PatreonBaseIE):
                         'filesize': size_bytes,
                         'url': download_url,
                         'alt_title': traverse_obj(media_attributes, ('file_name', {str})),
+                        'width': traverse_obj(media_attributes, ('metadata', 'dimensions', 'w', {int_or_none})),
+                        'height': traverse_obj(media_attributes, ('metadata', 'dimensions', 'h', {int_or_none})),
                     })
                 if media_id := traverse_obj(include, ('id', {str})):
                     seen_media_ids.add(media_id)
