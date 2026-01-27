@@ -1790,6 +1790,10 @@ from .sovietscloset import (
     SovietsClosetIE,
     SovietsClosetPlaylistIE,
 )
+from .dudethatscontent import (
+    DudeThatsContentIE,
+    DudeThatsContentPlaylistIE
+)
 from .spankbang import (
     SpankBangIE,
     SpankBangPlaylistIE,
