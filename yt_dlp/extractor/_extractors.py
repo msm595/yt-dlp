@@ -132,6 +132,7 @@ from .atresplayer import AtresPlayerIE
 from .atscaleconf import AtScaleConfEventIE
 from .audimedia import AudiMediaIE
 from .audioboom import AudioBoomIE
+from .audiochan import AudiochanIE
 from .audiodraft import (
     AudiodraftCustomIE,
     AudiodraftGenericIE,
@@ -492,6 +493,7 @@ from .drtv import (
     DRTVSeriesIE,
 )
 from .dtube import DTubeIE
+from .dudethatscontent import DudeThatsContentIE, DudeThatsContentPlaylistIE
 from .dumpert import DumpertIE
 from .duoplay import DuoplayIE
 from .dvtv import DVTVIE
@@ -1789,10 +1791,6 @@ from .southpark import (
 from .sovietscloset import (
     SovietsClosetIE,
     SovietsClosetPlaylistIE,
-)
-from .dudethatscontent import (
-    DudeThatsContentIE,
-    DudeThatsContentPlaylistIE
 )
 from .spankbang import (
     SpankBangIE,
