@@ -400,6 +400,10 @@ class PatreonIE(PatreonBaseIE):
             'comment_count': ('comment_count', {int_or_none}),
         })
 
+        can_view_post = traverse_obj(attributes, 'current_user_can_view')
+        if can_view_post is False:
+            self.raise_no_formats('You do not have access to this post', video_id=video_id, expected=True)
+
         seen_media_ids = set()
         entries = []
         idx = 0
@@ -407,8 +411,16 @@ class PatreonIE(PatreonBaseIE):
             include_type = include['type']
             if include_type == 'media':
                 media_attributes = traverse_obj(include, ('attributes', {dict})) or {}
-                download_url = url_or_none(media_attributes.get('download_url'))
-                ext = mimetype2ext(media_attributes.get('mimetype'))
+                mimetype = media_attributes.get('mimetype') or ''
+                ext = mimetype2ext(mimetype)
+                # For image media, prefer image_urls['original'] (q=100, no resize)
+                # over download_url which uses {"a":1,"p":1} and serves a 1080px preview.
+                # For video/audio, image_urls contains a thumbnail — do not use it.
+                image_urls = media_attributes.get('image_urls') or {}
+                download_url = (
+                    (url_or_none(image_urls.get('original')) if mimetype.startswith('image/') else None)
+                    or url_or_none(media_attributes.get('download_url'))
+                )
 
                 # if size_bytes is None, this media file is likely unavailable
                 # See: https://github.com/yt-dlp/yt-dlp/issues/4608
@@ -504,20 +516,22 @@ class PatreonIE(PatreonBaseIE):
                 entries.append(media)
                 seen_media_ids.add(media_id)
 
-        can_view_post = traverse_obj(attributes, 'current_user_can_view')
         comments = None
         if can_view_post and info.get('comment_count'):
             comments = self.extract_comments(video_id)
 
-        if not entries and can_view_post is False:
-            self.raise_no_formats('You do not have access to this post', video_id=video_id, expected=True)
-        elif not entries:
+        if not entries:
             self.raise_no_formats('No supported media found in this post', video_id=video_id, expected=True)
         elif len(entries) == 1:
             info.update(entries[0])
         else:
+            # Don't propagate the post-level thumbnail into individual image entries —
+            # it would cause yt-dlp to write the cover photo to each image slot's path
+            # before downloading the actual image, resulting in the cover being saved
+            # instead of the real content. The thumbnail stays on the playlist itself.
+            entry_info = {k: v for k, v in info.items() if k != 'thumbnail'}
             for entry in entries:
-                entry.update(info)
+                entry.update(entry_info)
             return self.playlist_result(entries, video_id, **info, __post_extractor=comments)
 
         info['id'] = video_id
