@@ -1,7 +1,7 @@
 import re
 
 from .common import InfoExtractor
-from ..utils import try_get, unified_timestamp
+from ..utils import unified_timestamp
 
 
 class DudeThatsContentBaseIE(InfoExtractor):
@@ -25,9 +25,9 @@ class DudeThatsContentBaseIE(InfoExtractor):
             'uploader_url': 'https://www.patreon.com/c/DudeTL/posts',
             'was_live': True,
             'availability': 'public',
-            #'series': game_name,
-            #'season': category_name,
-            #'episode_number': episode_number,
+            # 'series': game_name,
+            # 'season': category_name,
+            # 'episode_number': episode_number,
         }
 
 
@@ -35,54 +35,23 @@ class DudeThatsContentIE(DudeThatsContentBaseIE):
     _VALID_URL = r'https?://(?:www\.)?dudethatscontent\.com/helper-tier/(?P<id>[0-9]+)/?'
     _TESTS = [
         {
-            'url': 'https://dudethatscontent.com/helper-tier/1117',
-            'md5': 'bd012b04b261725510ca5383074cdd55',
+            'url': 'https://dudethatscontent.com/helper-tier/1091',
+            # Posts are gated behind the creator's Patreon tier; running this requires --cookies.
+            'skip': 'Requires Patreon authentication',
             'info_dict': {
-                'id': '1337',
+                'id': '1091',
                 'ext': 'mp4',
-                'title': 'The Witcher #13',
-                'thumbnail': r're:^https?://.*\.b-cdn\.net/2f0cfbf4-3588-43a9-a7d6-7c9ea3755e67/thumbnail\.jpg$',
-                'uploader': 'SovietWomble',
-                'creator': 'SovietWomble',
-                'release_timestamp': 1492091580,
-                'release_date': '20170413',
-                'timestamp': 1492091580,
-                'upload_date': '20170413',
-                'uploader_id': 'SovietWomble',
-                'uploader_url': 'https://www.twitch.tv/SovietWomble',
-                'duration': 7007,
+                'title': '2024.01_Patreon_IRL_Video',
+                'thumbnail': r're:^https?://.*\.b-cdn\.net/[a-f0-9\-]+/thumbnail\.jpg$',
+                'uploader': 'DudeThatsLewd',
+                'creator': 'DudeThatsLewd',
+                'uploader_id': 'DudeThatsLewd',
+                'uploader_url': 'https://www.patreon.com/c/DudeTL/posts',
+                'duration': 615,
                 'was_live': True,
                 'availability': 'public',
-                'series': 'The Witcher',
-                'season': 'Misc',
-                'episode_number': 13,
-                'episode': 'Episode 13',
             },
-        },
-        {
-            'url': 'https://dudethatscontent.com/helper-tier/1115',
-            'md5': '89fa928f183893cb65a0b7be846d8a90',
-            'info_dict': {
-                'id': '1105',
-                'ext': 'mp4',
-                'title': 'Arma 3 - Zeus Games #5',
-                'uploader': 'SovietWomble',
-                'thumbnail': r're:^https?://.*\.b-cdn\.net/c0e5e76f-3a93-40b4-bf01-12343c2eec5d/thumbnail\.jpg$',
-                'creator': 'SovietWomble',
-                'release_timestamp': 1461157200,
-                'release_date': '20160420',
-                'timestamp': 1461157200,
-                'upload_date': '20160420',
-                'uploader_id': 'SovietWomble',
-                'uploader_url': 'https://www.twitch.tv/SovietWomble',
-                'duration': 8804,
-                'was_live': True,
-                'availability': 'public',
-                'series': 'Arma 3',
-                'season': 'Zeus Games',
-                'episode_number': 5,
-                'episode': 'Episode 5',
-            },
+            'params': {'skip_download': True},
         },
     ]
 
@@ -91,13 +60,20 @@ class DudeThatsContentIE(DudeThatsContentBaseIE):
             bunnycdn_url.replace('&amp;', '&'),
             video_id, note='Downloading BunnyCDN iframe', headers={'Referer': 'https://dudethatscontent.com/', 'Sec-Fetch-Dest': 'iframe'})
 
-        #activate_url = self._search_regex(r'(https?://video-\d{4}\.mediadelivery\.net/\.drm/[a-zA-Z0-9_\-=+]+/activate)', iframe, 'activate url')
-        #activation_resp = self._download_webpage(activate_url, video_id, note=f'Activating', headers={'Referer': "https://iframe.mediadelivery.net/"})
+        # activate_url = self._search_regex(r'(https?://video-\d{4}\.mediadelivery\.net/\.drm/[a-zA-Z0-9_\-=+]+/activate)', iframe, 'activate url')
+        # activation_resp = self._download_webpage(activate_url, video_id, note=f'Activating', headers={'Referer': "https://iframe.mediadelivery.net/"})
 
-        #m3u8_url = self._search_regex(r'(https?://iframe\.mediadelivery\.net/[a-f0-9\-]+/playlist\.drm\?contextId=[a-zA-Z0-9_\-=+]+&secret=[a-f0-9\-]+)', iframe, 'm3u8 url')
+        # m3u8_url = self._search_regex(r'(https?://iframe\.mediadelivery\.net/[a-f0-9\-]+/playlist\.drm\?contextId=[a-zA-Z0-9_\-=+]+&secret=[a-f0-9\-]+)', iframe, 'm3u8 url')
         # https://vz-68a79baa-451.b-cdn.net/b6350115-5b03-4402-b840-249d25232a75/playlist.m3u8
         m3u8_url = self._search_regex(r'(https?://.*?\.b-cdn\.net/[a-zA-Z0-9_\-=+]+/playlist.m3u8)', iframe, 'm3u8 url')
-        thumbnail_url = self._search_regex(r'"thumbnailUrl": "(https://.*?\.b-cdn\.net/[a-zA-Z0-9_\-=+]+/thumbnail.*?\.jpg)",', iframe, 'thumbnail url')
+        # Thumbnail is optional metadata: don't let a missing/changed thumbnailUrl abort the whole
+        # extraction. BunnyCDN serves the thumbnail under the same /<guid>/ path as the playlist,
+        # so fall back to deriving it from the m3u8 URL.
+        thumbnail_url = self._search_regex(
+            r'"thumbnailUrl":\s*"(https://[^"]+?\.b-cdn\.net/[a-zA-Z0-9_\-=+]+/[^"]+?\.jpg)"',
+            iframe, 'thumbnail url', fatal=False)
+        if not thumbnail_url:
+            thumbnail_url = re.sub(r'/playlist\.m3u8.*$', '/thumbnail.jpg', m3u8_url)
 
         m3u8_formats = self._extract_m3u8_formats(m3u8_url, video_id, headers=self.MEDIADELIVERY_REFERER)
 
@@ -106,10 +82,14 @@ class DudeThatsContentIE(DudeThatsContentBaseIE):
         else:
             duration = self._extract_m3u8_vod_duration(
                 m3u8_formats[0]['url'], video_id, headers=self.MEDIADELIVERY_REFERER)
-            
 
-        title = self._search_regex(r'"name": "(.*?)\.mp4"', iframe, 'title')
-        release_date = self._search_regex(r'"uploadDate": "(.*?)"', iframe, 'release date')
+        # Two iframe templates are in use: older ones embed JSON-LD ("name"/"uploadDate"), newer
+        # ones put the title in a data-plyr-config blob ("title") and omit the upload date.
+        title = self._search_regex(
+            [r'"name":\s*"(.*?)\.mp4"', r'"title":\s*"(.*?)\.mp4"', r'"(?:name|title)":\s*"(.*?)"'],
+            iframe, 'title', fatal=False) or video_id
+        release_date = self._search_regex(
+            r'"uploadDate":\s*"(.*?)"', iframe, 'release date', fatal=False)
 
         return {
             'formats': m3u8_formats,
@@ -134,38 +114,15 @@ class DudeThatsContentIE(DudeThatsContentBaseIE):
 class DudeThatsContentPlaylistIE(DudeThatsContentIE):
     _VALID_URL = r'https?://(?:www\.)?dudethatscontent\.com/index'
     _TESTS = [
-
         {
-            'url': 'https://sovietscloset.com/The-Witcher',
+            'url': 'https://dudethatscontent.com/index',
+            # The index is gated behind the creator's Patreon tier; running this requires --cookies.
+            'skip': 'Requires Patreon authentication',
             'info_dict': {
-                'id': 'The-Witcher',
-                'title': 'The Witcher',
+                'id': 'index',
+                'title': 'index',
             },
-            'playlist_mincount': 31,
-        },
-        {
-            'url': 'https://sovietscloset.com/Arma-3/Zeus-Games',
-            'info_dict': {
-                'id': 'Arma-3/Zeus-Games',
-                'title': 'Arma 3 - Zeus Games',
-            },
-            'playlist_mincount': 3,
-        },
-        {
-            'url': 'https://sovietscloset.com/arma-3/zeus-games/',
-            'info_dict': {
-                'id': 'arma-3/zeus-games',
-                'title': 'Arma 3 - Zeus Games',
-            },
-            'playlist_mincount': 3,
-        },
-        {
-            'url': 'https://sovietscloset.com/Total-War-Warhammer',
-            'info_dict': {
-                'id': 'Total-War-Warhammer',
-                'title': 'Total War: Warhammer - Greenskins',
-            },
-            'playlist_mincount': 33,
+            'playlist_mincount': 1,
         },
     ]
 
@@ -174,7 +131,7 @@ class DudeThatsContentPlaylistIE(DudeThatsContentIE):
         webpage = self._download_webpage(url, playlist_id)
 
         # href="https://dudethatscontent.com/helper-tier/1117"
-        page_urls = re.findall(rf'href="(https://dudethatscontent.com/helper-tier/\d+)"', webpage)
+        page_urls = re.findall(r'href="(https://dudethatscontent.com/helper-tier/\d+)"', webpage)
         page_urls = sorted(set(page_urls))
 
         entries = [{
